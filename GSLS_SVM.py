@@ -27,9 +27,10 @@ class GSLS_Regression:
             for j in range(S.size):
                 subresult -= self.betta[j] * self.kernel(x[i], x[S[j]])
             subresult -= self.b
-            result += self.gamma / l * subresult ** 2
+            subresult = subresult ** 2 / l
+            result += self.gamma * subresult
     
-        return result
+        return result, subresult
     
     def new_omega_vector(self, S, x):
         omega = np.array([[0]] * (S.size - 1))
@@ -85,7 +86,7 @@ class GSLS_Regression:
         H = np.array([[l]])
         inversive_H = np.array([[1/l]])
         opt_inversive_H = np.array([[1/l]])
-        objective = np.array([])
+        error = np.array([])
         #init Y
         Y = np.sum(y)
         #first iteration
@@ -107,7 +108,7 @@ class GSLS_Regression:
             #new_H = np.hstack([np.vstack([l, phi]), np.vstack([phi, om])])
             #print(new_H @ solve - right)
 
-            new_obj = self.objective_function(S, x, y)
+            new_obj, err = self.objective_function(S, x, y)
             #print(self.betta, self.b, S, new_obj)
             if (obj > new_obj):
                 index = i
@@ -116,9 +117,10 @@ class GSLS_Regression:
                 #opt_H = np.hstack([np.vstack([l, phi]), np.vstack([phi, om])])
                 opt_betta = np.copy(self.betta)
                 opt_b = np.copy(self.b)
+                opt_err = err
         S[-1] = index
         inversive_H = np.copy(opt_inversive_H)
-        objective = np.append(objective, obj)
+        error = np.append(error, opt_err)
         #H = opt_H
         self.betta = np.copy(opt_betta)
         self.b = np.copy(opt_b)
@@ -147,7 +149,7 @@ class GSLS_Regression:
 
                 #new_H = np.hstack([np.vstack([H, np.transpose(np.vstack([phi, omega]))]), np.vstack([np.vstack([phi, omega]), np.array([om])])])
 
-                new_obj = self.objective_function(S, x, y)
+                new_obj, err = self.objective_function(S, x, y)
                 #print(new_obj, end=' ')
                 if (obj > new_obj):
                     index = i
@@ -156,16 +158,18 @@ class GSLS_Regression:
                     #opt_H = np.hstack([np.vstack([H, np.transpose(np.vstack([phi, omega]))]), np.vstack([np.vstack([phi, omega]), np.array([om])])])
                     opt_betta = np.copy(self.betta)
                     opt_b = np.copy(self.b)
+                    opt_err = err
             S[-1] = index
             inversive_H = np.copy(opt_inversive_H)
-            objective = np.append(objective, obj)
+            error = np.append(error, opt_err)
             #H = opt_H
             self.betta = np.copy(opt_betta)
             self.b = np.copy(opt_b)
             #print(H @ inversive_H)
         self.S = S
         self.x = x
-        return objective
+        return error
+    
 
     def calc(self, x):
         result = 0
